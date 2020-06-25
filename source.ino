@@ -9,7 +9,7 @@
 //See limitations of Arduino SoftwareSerial
 SoftwareSerial serial(10, 11);
 RoboClaw roboclaw(&serial, 10000);
-U8GLIB_ST7920_128X64 u8g(13, 11, 12, U8G_PIN_NONE);
+U8GLIB_ST7920_128X64 u8g(9, 7, 8, U8G_PIN_NONE);
 
 
 #define address 0x80
@@ -41,9 +41,6 @@ unsigned long inspirationTime;
 
 void setup() {
  startTimer3(1000);
-  //  display_welcome_text();
-//    set_default_values();
-
   //Open roboclaw serial ports
   roboclaw.begin(38400);
 
@@ -53,7 +50,6 @@ void setup() {
   pinMode(buzzer, OUTPUT);
   pinMode(14, INPUT_PULLUP);
   pinMode(12,OUTPUT);
-  //zero position at the start
   while(current_angle > 4 || _switch == 1){
     zero();
   }
@@ -62,14 +58,13 @@ void setup() {
   timer_counter = 0;
  
 }
-//states: 
-// F = Forward, B = Backward, S = Stop
+
 void loop() {
   
   u8g.firstPage();
   do {   
     draw();
-    display_up_time();
+   
   } while( u8g.nextPage() );
  
   //reading data from volumes
@@ -101,18 +96,19 @@ void loop() {
 //charge indicator setup
 charge_indicator = analogRead(A12);
 charge_indicator = map(charge_indicator,0,1023,0,100);
-if(charge_indicator <80) {
+if(charge_indicator <65) {
   digitalWrite(12,HIGH);
-}else if(charge_indicator >95) {
+}else if(charge_indicator >82) {
   digitalWrite(12,LOW);
 }
-lcd.setCursor(1, 1);
-lcd.print(charge_indicator+"%");
+
+//pressure
+
+
 
 
 }
-//because the motor does not have encoder, for the start of the work we have set the motor backward movement speed manual. 
-//max speed = 127, min speed =  0.
+
 void set_ratio_case() {
   switch(E) {
     case 1: 
@@ -126,10 +122,7 @@ void set_ratio_case() {
     break;
   }
 }
-//stop the motors
 void stop_motors() {
-//    lcd.setCursor(1, 1);
-//  lcd.print(timer_counter/100);
   if (timer_counter < time_per_BPM) {
     roboclaw.BackwardM1(address, 0);
   } else {
@@ -137,7 +130,6 @@ void stop_motors() {
     timer_counter = 0;
   }
 }
-//zero the position of the gears
 void zero() {
   if (current_angle > 4 || _switch == 1) {
     roboclaw.BackwardM1(address, motor_speed);
@@ -146,7 +138,6 @@ void zero() {
     roboclaw.BackwardM1(address, 0);
   }
 }
-//move to the wanted angle
 void  move_to (int angle) {
   if (angle > current_angle) {
     roboclaw.ForwardM1(address, 127);
@@ -165,23 +156,7 @@ void calculate_breath_peroid(int volume) {
   time_per_BPM = 60000 / no_breath;
 }
 
-void display_data() {
-  //show motor_speed of motor to set air flow pressure
-  lcd.setCursor(6, 0);
-  lcd.print("I:E 1:");
-  lcd.print(E);
-  lcd.print(" ");
 
-  //show cc volume
-  lcd.setCursor(6, 1);
-  lcd.print("V ");
-  lcd.print(cc_vol);
-
-  lcd.setCursor(0, 0);
-  lcd.print("B ");
-  lcd.print(no_breath);
-  lcd.print(" ");
-}
 
 void buzzer_func() {
   tone(buzzer, 5);
@@ -194,29 +169,7 @@ void set_default_values() {
 
 }
 
-void display_welcome_text() {
-  //write welcome
-  lcd.setCursor(0, 0);
-  lcd.print("Afghan Dreamers");
-  lcd.setCursor(1, 0);
-  lcd.print("   ventilator   ");
-  delay(800);
-  //clear screen
-  lcd.setCursor(0, 0);
-  lcd.print("                ");
-  lcd.setCursor(1, 0);
-  lcd.print("                ");
-}
-void display_edit_status(int state) {
-  lcd.setCursor(14, 0);
-  lcd.print("E");
-  lcd.setCursor(13, 1);
-  if (state == 0) {
-    lcd.print("OFF");
-  } else {
-    lcd.print("ON ");
-  }
-}
+
 void read_input_amounts() {
   //motor motor_speed
   E = analogRead(A15);
@@ -266,7 +219,7 @@ void draw(){
   u8g.drawStr(53, 25, buf);
   
   //volume
-  u8g.drawStr( 5, 37, "V");
+  u8g.drawStr( 5, 37, "TV");
  
   String _v = String(cc_vol);
   u8g.drawStr( 40, 37, _v.c_str());
@@ -276,11 +229,20 @@ void draw(){
   u8g.drawStr( 40, 49, "A");
 
 //edit status
-u8g.drawStr( 70, 13, "E");
-  lcd.setCursor(13, 1);
+u8g.drawStr( 70, 13, "Edit");
+//  lcd.setCursor(13, 1);
   if (!edit_status) {
-    u8g.drawStr( 90, 25, "OFF"));
+    u8g.drawStr( 110, 13, "OFF");
   } else {
-    u8g.drawStr( 90, 25, "ON"));
+    u8g.drawStr( 110, 13, "ON");
   }
+//show charge
+  u8g.drawStr( 70, 25, "Charge");
+  String _ci = String(charge_indicator);
+  u8g.drawStr( 110, 25, _ci.c_str());
+
+  //show pressure
+  u8g.drawStr( 70, 38, "Press");
+  //String _ci = String(charge_indicator);
+  u8g.drawStr( 110, 38, "25");
 }
