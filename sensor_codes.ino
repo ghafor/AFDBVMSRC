@@ -13,8 +13,8 @@ void read() {
     // read the voltage
     int V = analogRead(A0); 
     int Vs = analogRead(A1);
-    float Pmin = -1.4503773773;   // pressure max in mbar
-    float Pmax = 1.4503773773;    // pressure min in mbar
+    float Pmin = -2;   // pressure max in mbar
+    float Pmax = 2;    // pressure min in mbar
     float Vmax = 1023;     // max voltage in range from analogRead
     // convert to pressure
     float Vs_A = (5*Vs/Vmax);
