@@ -15,12 +15,12 @@ void read() {
     int V = analogRead(A0); 	// sensor Vout in (0-1023)
     int Vs = analogRead(A1);	// sensor Vsupply in (0-1023)
 
-    float Pmin = -2;   			// pressure max in Psi
-    float Pmax = 2;    			// pressure min in Psi
+    float Pmin = -2;   			// pressure min in Psi
+    float Pmax = 2;    			// pressure max in Psi
 
     float Vmax = 1023;     		// max voltage in range from analogRead
 
-    // convert to pressure
+    // conversion from V to cmH2O pressure
     float Vs_A = (5*Vs/Vmax);	// sensor Vsupply in V
     float Vout = (5*V/Vmax);	// sensor Vout in V
 
