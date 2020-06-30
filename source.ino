@@ -142,7 +142,7 @@ void stop_motors() {
   }
 }
 void zero() {
-  if (current_angle > 4 || _switch == 1) {
+  if (current_angle > 6 || _switch == 1) {
     roboclaw.BackwardM1(address, motor_speed);
   } else {
     motor_state = 'S';
