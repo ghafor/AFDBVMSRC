@@ -18,10 +18,14 @@ U8GLIB_ST7920_128X64 u8g(9, 7, 8, U8G_PIN_NONE);
 
 bool is_backward = false;
 bool edit_status;
+bool is_error;
+bool is_triggered;
+
 char motor_state = 'S';
 double RR;
 
 const int buzzer = 13;
+float current_pres;
 int motor_speed;
 int rr_vol;
 int time_per_BPM = 0;
@@ -39,12 +43,13 @@ unsigned long prevMillis;
 unsigned long currentMillis;
 unsigned long inspirationTime;
 
+String error_text;
 void setup() {
  startTimer3(1000);
   //Open roboclaw serial ports
   roboclaw.begin(38400);
 
-  u8g.setFont(u8g_font_6x13);
+  u8g.setFont(u8g_font_6x10);
   u8g.setColorIndex(1);    
   Serial.begin(9600);
   pinMode(buzzer, OUTPUT);
@@ -103,10 +108,16 @@ if(charge_indicator <65) {
 }
 
 //pressure
+readPressure();
+if(current_pres <-0.7) {
+  //breath triggered
+  motor_state = 'F';
+}
 
 
 
-
+//alarm condition
+alarmConditions();
 }
 
 void set_ratio_case() {
@@ -158,15 +169,11 @@ void calculate_breath_peroid(int volume) {
 
 
 
-void buzzer_func() {
-  tone(buzzer, 5);
-  delay(50);
-  noTone(buzzer);
-}
+
 void set_default_values() {
   motor_speed = 127;
   calculate_breath_peroid(1023);
-
+  
 }
 
 
@@ -197,52 +204,126 @@ void map_angle() {
 }
 
 void draw(){
-    u8g.drawVLine(65,0,128);
-    u8g.drawRFrame(0,0,128,64,4);            // upper frame
+    u8g.drawVLine(65,0,45);
+    u8g.drawHLine(0,45,128);
+    u8g.drawRFrame(0,0,128,64,2);            // upper frame
   // convert floats into char u8g strings 
 //  char temp_string[5];
 //  dtostrf(1023.4, 3, 1, temp_string);   
 //  u8g.drawStr( 15, 13, temp_string);       // do this for temperature
   //Breath Per Minute Display
-  u8g.drawStr( 5, 13, "BPM");
+  u8g.drawStr( 5, 10, "BPM");
  
   String _BPM = String(no_breath);
-  u8g.drawStr( 40, 13, _BPM.c_str());
+  u8g.drawStr( 40, 10, _BPM.c_str());
 
   //Inspiration to Expiration Ratio display
-   u8g.drawStr( 5, 25, "I:E");
-  u8g.drawStr(40, 25, "1:");
+   u8g.drawStr( 5, 22, "I:E");
+  u8g.drawStr(40, 22, "1:");
 
 
  char buf[2];
   snprintf (buf, 2, "%d", E);
-  u8g.drawStr(53, 25, buf);
+  u8g.drawStr(53, 22, buf);
   
   //volume
-  u8g.drawStr( 5, 37, "TV");
+  u8g.drawStr( 5, 34, "TV");
  
   String _v = String(cc_vol);
-  u8g.drawStr( 40, 37, _v.c_str());
+  u8g.drawStr( 40, 34, _v.c_str());
 
   //mode
-  u8g.drawStr( 5, 49, "Mode");
-  u8g.drawStr( 40, 49, "A");
+  u8g.drawStr( 5, 44, "Mode");
+  u8g.drawStr( 40, 44, "A");
 
 //edit status
-u8g.drawStr( 70, 13, "Edit");
+u8g.drawStr( 70, 10, "Edit");
 //  lcd.setCursor(13, 1);
   if (!edit_status) {
-    u8g.drawStr( 110, 13, "OFF");
+    u8g.drawStr( 110, 10, "OFF");
   } else {
-    u8g.drawStr( 110, 13, "ON");
+    u8g.drawStr( 110, 10, "ON");
   }
 //show charge
-  u8g.drawStr( 70, 25, "Charge");
+  u8g.drawStr( 70, 22, "Charge");
   String _ci = String(charge_indicator);
-  u8g.drawStr( 110, 25, _ci.c_str());
+  u8g.drawStr( 110, 22, _ci.c_str());
 
   //show pressure
-  u8g.drawStr( 70, 38, "Press");
-  //String _ci = String(charge_indicator);
-  u8g.drawStr( 110, 38, "25");
+  u8g.drawStr( 70, 34, "Pre");
+  String _current_pres = String(current_pres);
+  u8g.drawStr( 90, 34, _current_pres.c_str());
+
+  //show errors in the place
+ // u8g.drawStr( 5, 58, "system is OK!");
+  
+  //if pressure is so high, if charge is low, if something went wrong, run the buzzer
+   if(charge_indicator < 65) {
+    u8g.drawStr( 5, 58, "battery critical low");
+   }else if(current_pres > 20) {
+    u8g.drawStr( 5, 58, "Critical Pressure");
+   }else {
+        u8g.drawStr( 5, 58, "System is OK!");
+    }
 }
+
+void alarmConditions() {
+   //if pressure is so high, if charge is low, if something went wrong, run the buzzer
+   if(charge_indicator < 65) {
+    buzzer_func(1);
+    //u8g.drawStr( 5, 58, "battery critical low");
+   }else if(current_pres > 20) {
+    //u8g.drawStr( 5, 58, "Critical Pressure");
+    buzzer_func(2);
+    motor_state = 'B';
+   }else {
+      //  u8g.drawStr( 5, 58, "System is OK!");
+    }
+}
+void buzzer_func(int state) {
+  switch(state){
+    //if battery charge is under 20 percent
+    case 1:
+      for(int i=0;i<3;i++) {
+        tone(buzzer, 5);
+        delay(50);
+      }
+      noTone(buzzer);
+    break;
+    //pressure overload condition
+    case 2:
+      for(int i=0;i<5;i++) {
+        tone(buzzer, 7);
+        delay(40);
+      }
+      noTone(buzzer);
+    break;
+    
+  }
+  }
+
+void readPressure() {
+     // read the voltage
+   int V = analogRead(A9);  // sensor Vout in (0-1023)
+    int Vs = 1023;  // sensor Vsupply in (0-1023)
+
+    float Pmin = -2;        // pressure min in Psi
+    float Pmax = 2;         // pressure max in Psi
+
+    float Vmax = 1023;        // max voltage in range from analogRead
+
+    // conversion from V to cmH2O pressure
+    float Vs_A = (5*Vs/Vmax); // sensor Vsupply in V
+    float Vout = (5*V/Vmax);  // sensor Vout in V
+
+    // pressure difference between port 1 and 2 of the sensor in Psi
+    // based on the TE Connectivity calibration curve for MS4525 002 sensor
+
+    float P = ((Vout - 0.5)*(Pmax - Pmin)/(0.8*Vs_A)) + Pmin;
+
+    // convert to cmH2O
+    P *= 70.307;        // cmH2O (1 Psi = 70.307 cmH2O)
+  
+    Serial.println(P);
+    current_pres = P;
+} 
