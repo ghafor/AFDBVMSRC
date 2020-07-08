@@ -26,6 +26,7 @@ double RR;
 
 const int buzzer = 13;
 float current_pres;
+float peep;
 int motor_speed;
 int rr_vol;
 int time_per_BPM = 0;
@@ -101,7 +102,7 @@ void loop() {
 //charge indicator setup
 charge_indicator = analogRead(A12);
 charge_indicator = map(charge_indicator,0,1023,0,100);
-if(charge_indicator <65) {
+if(charge_indicator <90) {
   digitalWrite(12,HIGH);
 }else if(charge_indicator >82) {
   digitalWrite(12,LOW);
@@ -109,7 +110,7 @@ if(charge_indicator <65) {
 
 //pressure
 readPressure();
-if(current_pres <-0.7) {
+if(current_pres <-1.0) {
   //breath triggered
   motor_state = 'F';
 }
@@ -147,7 +148,9 @@ void zero() {
   } else {
     motor_state = 'S';
     roboclaw.BackwardM1(address, 0);
+    peep = current_pres;
   }
+  
 }
 void  move_to (int angle) {
   if (angle > current_angle) {
@@ -207,11 +210,6 @@ void draw(){
     u8g.drawVLine(65,0,45);
     u8g.drawHLine(0,45,128);
     u8g.drawRFrame(0,0,128,64,2);            // upper frame
-  // convert floats into char u8g strings 
-//  char temp_string[5];
-//  dtostrf(1023.4, 3, 1, temp_string);   
-//  u8g.drawStr( 15, 13, temp_string);       // do this for temperature
-  //Breath Per Minute Display
   u8g.drawStr( 5, 10, "BPM");
  
   String _BPM = String(no_breath);
@@ -238,7 +236,6 @@ void draw(){
 
 //edit status
 u8g.drawStr( 70, 10, "Edit");
-//  lcd.setCursor(13, 1);
   if (!edit_status) {
     u8g.drawStr( 110, 10, "OFF");
   } else {
@@ -252,10 +249,11 @@ u8g.drawStr( 70, 10, "Edit");
   //show pressure
   u8g.drawStr( 70, 34, "Pre");
   String _current_pres = String(current_pres);
-  u8g.drawStr( 90, 34, _current_pres.c_str());
-
-  //show errors in the place
- // u8g.drawStr( 5, 58, "system is OK!");
+  u8g.drawStr( 96, 34, _current_pres.c_str());
+//show peep
+  u8g.drawStr( 70, 43, "peep");
+  String _peep = String(peep);
+  u8g.drawStr( 96, 43, _peep.c_str());
   
   //if pressure is so high, if charge is low, if something went wrong, run the buzzer
    if(charge_indicator < 65) {
@@ -323,7 +321,7 @@ void readPressure() {
 
     // convert to cmH2O
     P *= 70.307;        // cmH2O (1 Psi = 70.307 cmH2O)
-  
+    P += 0.17;
     Serial.println(P);
     current_pres = P;
 } 
