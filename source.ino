@@ -15,12 +15,12 @@ U8GLIB_ST7920_128X64 u8g(9, 7, 8, U8G_PIN_NONE);
 #define address 0x80
 #define min_angle 590
 #define max_angle 160
-
+int an=0;
 bool is_backward = false;
 bool edit_status;
 bool is_error;
 bool is_triggered;
-
+bool test = true;
 char motor_state = 'S';
 double RR;
 
@@ -56,7 +56,7 @@ void setup() {
   pinMode(buzzer, OUTPUT);
   pinMode(14, INPUT_PULLUP);
   pinMode(12,OUTPUT);
-  while(current_angle > 4 || _switch == 1){
+  while(current_angle > 4){
     zero();
   }
   
@@ -74,20 +74,20 @@ void loop() {
   } while( u8g.nextPage() );
  
   //reading data from volumes
+  read_input_amounts();//read inputs
   set_button = digitalRead(14);
-  if (set_button==1){
-    read_input_amounts();//read inputs
-    }else {
-      edit_status = false;//show edit off  
-    }
+
   _switch = digitalRead(21);
   map_angle();
   set_ratio_case();
   switch (motor_state) {
     //go forward
     case 'F':
-      move_to(cc_vol);
-      
+      //if(test == true and current_pres<7) {
+        an=0;
+   an=current_angle;
+        move_to(cc_vol);
+       //}else{motor_state='B';}
       break;
     case 'B':
       zero();
@@ -115,6 +115,9 @@ if(current_pres <-1.0) {
   motor_state = 'F';
 }
 
+if(current_pres>4) {
+  test = false;
+}
 
 
 //alarm condition
@@ -143,7 +146,7 @@ void stop_motors() {
   }
 }
 void zero() {
-  if (current_angle > 6 || _switch == 1) {
+  if (current_angle > 15) {
     roboclaw.BackwardM1(address, motor_speed);
   } else {
     motor_state = 'S';
@@ -189,7 +192,7 @@ void read_input_amounts() {
   calculate_breath_peroid(rr_vol);
   //cc tidal volume
   cc_vol = analogRead(A7);
-  cc_vol = map(cc_vol,0,1023,15,80);
+  cc_vol = map(cc_vol,0,1023,20,80);
   
   edit_status = true;
   
@@ -235,12 +238,10 @@ void draw(){
   u8g.drawStr( 40, 44, "A");
 
 //edit status
-u8g.drawStr( 70, 10, "Edit");
-  if (!edit_status) {
-    u8g.drawStr( 110, 10, "OFF");
-  } else {
-    u8g.drawStr( 110, 10, "ON");
-  }
+u8g.drawStr( 70, 10, "An");
+    String _current_angle = String(an);
+    u8g.drawStr( 100, 10,_current_angle.c_str());
+ 
 //show charge
   u8g.drawStr( 70, 22, "Charge");
   String _ci = String(charge_indicator);
@@ -267,7 +268,7 @@ u8g.drawStr( 70, 10, "Edit");
 
 void alarmConditions() {
    //if pressure is so high, if charge is low, if something went wrong, run the buzzer
-   if(charge_indicator < 65) {
+   if(charge_indicator < 65 && charge_indicator>23) {
     buzzer_func(1);
     //u8g.drawStr( 5, 58, "battery critical low");
    }else if(current_pres > 20) {
